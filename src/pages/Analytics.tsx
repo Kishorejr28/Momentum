@@ -105,6 +105,7 @@ export default function Analytics() {
   const daysToGoal = kgToGoal !== null && weightChangePerDay !== 0
     ? Math.abs(Math.round(kgToGoal / weightChangePerDay))
     : null
+  const weeksToGoal = daysToGoal !== null ? Math.round(daysToGoal / 7) : null
 
   const isLosingWeight = dailyDeficitOrSurplus > 0
   const isGainingWeight = dailyDeficitOrSurplus < 0
@@ -326,9 +327,11 @@ export default function Analytics() {
 
             {daysToGoal !== null && onTrack && (
               <div className="text-center pt-1 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
-                <p className="text-2xl font-black" style={{ color: `rgb(var(--accent))` }}>{daysToGoal} days</p>
+                <p className="text-2xl font-black" style={{ color: `rgb(var(--accent))` }}>
+                  ~{weeksToGoal} weeks
+                </p>
                 <p className="text-xs" style={{ color: 'rgb(var(--text-muted))' }}>
-                  estimated to reach {goalWeight} kg — {format(new Date(Date.now() + daysToGoal * 86400000), 'MMM d, yyyy')}
+                  ({daysToGoal} days) · reach {goalWeight} kg by {format(new Date(Date.now() + daysToGoal * 86400000), 'MMM d, yyyy')}
                 </p>
               </div>
             )}

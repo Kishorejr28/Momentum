@@ -280,6 +280,7 @@ export default function FoodLog() {
   const [logs, setLogs] = useState<any[]>([])
   const [summary, setSummary] = useState<any>({ calories: 0, protein: 0, carbs: 0, fat: 0 })
   const [searchQuery, setSearchQuery] = useState('')
+  const panelRef = useRef<HTMLDivElement>(null)
   const [searchResults, setSearchResults] = useState<any[]>([])
   const [myFoods, setMyFoods] = useState<any[]>([])
   const [searchTab, setSearchTab] = useState<'all' | 'mine'>('all')
@@ -303,6 +304,13 @@ export default function FoodLog() {
     const [l, s] = await Promise.all([foodApi.getLogs(today), foodApi.getSummary(today)])
     setLogs(l)
     setSummary(s)
+  }
+
+  // Scroll panel into view on mobile when it opens
+  const scrollToPanel = () => {
+    setTimeout(() => {
+      panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 120)
   }
 
   const loadMyFoods = async () => {
@@ -493,23 +501,23 @@ export default function FoodLog() {
       )}
     </AnimatePresence>
 
-    <div className="space-y-5 pt-2">
+    <div className="space-y-5 pt-2 pb-8">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold" style={{ color: 'rgb(var(--text-primary))' }}>Food Log</h1>
           <p className="text-sm" style={{ color: 'rgb(var(--text-muted))' }}>{format(new Date(), 'EEEE, MMM d')}</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => { setShowSearch(!showSearch); setShowManual(false); setShowGrams(false) }}
+          <button onClick={() => { setShowSearch(!showSearch); setShowManual(false); setShowGrams(false); scrollToPanel() }}
             className="btn-accent flex items-center gap-1.5 text-sm py-2">
             <Search size={15} /> Search
           </button>
-          <button onClick={() => { setShowGrams(!showGrams); setShowSearch(false); setShowManual(false) }}
+          <button onClick={() => { setShowGrams(!showGrams); setShowSearch(false); setShowManual(false); scrollToPanel() }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold"
             style={{ background: 'rgba(var(--accent) / 0.12)', color: 'rgb(var(--accent))' }}>
             <Scale size={15} /> Grams
           </button>
-          <button onClick={() => { setShowManual(!showManual); setShowSearch(false); setShowGrams(false) }}
+          <button onClick={() => { setShowManual(!showManual); setShowSearch(false); setShowGrams(false); scrollToPanel() }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold"
             style={{ background: 'rgba(128,128,128,0.1)', color: 'rgb(var(--text-secondary))' }}>
             <Plus size={15} />
@@ -548,6 +556,7 @@ export default function FoodLog() {
       </motion.div>
 
       {/* ── Grams converter ── */}
+      <div ref={panelRef} />
       <AnimatePresence>
         {showGrams && (
           <motion.div
