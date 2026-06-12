@@ -35,8 +35,14 @@ function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen relative">
-      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4"
-        style={{ background: 'rgba(var(--surface, 18 18 28) / 0.85)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+      <header className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6"
+        style={{
+          paddingTop: 'calc(1rem + env(safe-area-inset-top))',
+          paddingBottom: '1rem',
+          background: 'rgba(var(--surface, 18 18 28) / 0.85)',
+          backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255,255,255,0.05)'
+        }}>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl flex items-center justify-center text-lg"
             style={{ background: `rgb(var(--accent))`, boxShadow: `0 0 16px rgb(var(--accent) / 0.5)` }}>
@@ -66,7 +72,11 @@ function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="pt-20 pb-28 px-4 max-w-2xl mx-auto relative z-10 min-h-screen">
+      <main className="px-4 max-w-2xl mx-auto relative z-10 min-h-screen"
+        style={{
+          paddingTop: 'calc(5rem + env(safe-area-inset-top))',
+          paddingBottom: 'calc(7rem + env(safe-area-inset-bottom))',
+        }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={location.pathname}
@@ -79,8 +89,14 @@ function Layout({ children }: { children: React.ReactNode }) {
         </AnimatePresence>
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-4 py-3"
-        style={{ background: 'rgba(var(--surface, 18 18 28) / 0.92)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around px-4"
+        style={{
+          paddingTop: '0.75rem',
+          paddingBottom: 'calc(0.75rem + env(safe-area-inset-bottom))',
+          background: 'rgba(var(--surface, 18 18 28) / 0.92)',
+          backdropFilter: 'blur(24px)',
+          borderTop: '1px solid rgba(255,255,255,0.05)'
+        }}>
         {navItems.map(({ to, icon: Icon, label }) => (
           <NavLink key={to} to={to} end={to === '/'}>
             {({ isActive }) => (

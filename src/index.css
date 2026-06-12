@@ -97,16 +97,7 @@ body {
   overscroll-behavior: none;
 }
 
-/* Safe area for iPhone notch + home bar */
-main {
-  padding-bottom: calc(7rem + env(safe-area-inset-bottom)) !important;
-}
-nav {
-  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)) !important;
-}
-header {
-  padding-top: calc(1rem + env(safe-area-inset-top)) !important;
-}
+/* Safe area handled via inline styles in App.tsx */
 
 /* Ambient glow behind the page */
 #root::before {
