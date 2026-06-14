@@ -34,7 +34,13 @@ function StreakRing({ streak, level }: { streak: number; level: number }) {
   const dashOffset = circumference * (1 - progress)
 
   return (
-    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+    <motion.div
+      key={streak}
+      initial={{ scale: 0.92, opacity: 0.7 }}
+      animate={{ scale: 1, opacity: 1 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      className="relative flex items-center justify-center"
+      style={{ width: size, height: size }}>
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
         <circle cx={size / 2} cy={size / 2} r={radius}
           fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="8" />
@@ -45,14 +51,21 @@ function StreakRing({ streak, level }: { streak: number; level: number }) {
           strokeLinecap="round"
           strokeDasharray={circumference}
           strokeDashoffset={dashOffset}
-          style={{ transition: 'stroke-dashoffset 1s ease', filter: 'drop-shadow(0 0 8px rgb(var(--accent)))' }}
+          style={{ transition: 'stroke-dashoffset 1.2s cubic-bezier(0.34, 1.56, 0.64, 1)', filter: 'drop-shadow(0 0 10px rgb(var(--accent)))' }}
         />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-3xl font-black" style={{ color: 'rgb(var(--accent))' }}>{streak}</span>
+        <motion.span
+          key={streak}
+          initial={{ scale: 1.3, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+          className="text-3xl font-black" style={{ color: 'rgb(var(--accent))' }}>
+          {streak}
+        </motion.span>
         <span className="text-[11px] font-medium" style={{ color: 'rgb(var(--text-muted))' }}>day streak</span>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -67,6 +80,8 @@ export default function Dashboard() {
   useEffect(() => {
     habitsApi.getAll(today).then(setHabits)
     foodApi.getSummary(today).then(setMacros)
+    // Always refresh user on dashboard mount so streak is current
+    userApi.get().then(setUser)
   }, [])
 
   const saveName = async () => {

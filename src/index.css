@@ -113,20 +113,27 @@ body {
 /* Glass card */
 .glass {
   background: rgba(var(--surface-raised, 26 26 42) / 0.6);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 16px;
+  border-radius: 18px;
+  transition: box-shadow 0.25s ease, border-color 0.25s ease;
 }
 
 .glass-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
-.glass-hover:hover {
-  background: rgba(var(--surface-overlay, 32 32 52) / 0.8);
-  border-color: rgba(var(--accent, 99 102 241) / 0.3);
-  transform: translateY(-1px);
-  box-shadow: 0 8px 32px rgba(var(--accent, 99 102 241) / 0.12);
+/* On touch devices, use :active instead of :hover */
+@media (hover: hover) {
+  .glass-hover:hover {
+    background: rgba(var(--surface-overlay, 32 32 52) / 0.8);
+    border-color: rgba(var(--accent, 99 102 241) / 0.3);
+    box-shadow: 0 8px 32px rgba(var(--accent, 99 102 241) / 0.12);
+  }
+}
+.glass-hover:active {
+  transform: scale(0.98);
+  opacity: 0.85;
 }
 
 /* Accent button */
@@ -136,13 +143,20 @@ body {
   font-weight: 600;
   border-radius: 12px;
   padding: 10px 20px;
-  transition: all 0.2s ease;
+  transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s ease, box-shadow 0.15s ease;
   box-shadow: 0 4px 20px rgba(var(--accent) / 0.4);
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
 }
-.btn-accent:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-  box-shadow: 0 8px 28px rgba(var(--accent) / 0.5);
+.btn-accent:active {
+  transform: scale(0.95);
+  opacity: 0.85;
+}
+
+/* Remove tap highlight on all interactive elements */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 /* Streak ring glow */
@@ -150,10 +164,16 @@ body {
   filter: drop-shadow(0 0 12px var(--streak-glow, #6366f1));
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(var(--accent) / 0.3); border-radius: 3px; }
+/* Scrollbar — desktop only */
+@media (hover: hover) {
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(var(--accent) / 0.25); border-radius: 2px; }
+}
+
+/* Smooth scroll */
+* { scroll-behavior: smooth; }
+html { scroll-behavior: smooth; }
 
 /* Shimmer loading */
 .shimmer {

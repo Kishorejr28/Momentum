@@ -448,16 +448,23 @@ async function updateGlobalStreak(userId: string) {
   const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
   const yesterdayStr = yesterday.toISOString().split('T')[0]
 
+  // Don't update streak twice on the same day
+  if (profile.last_active_date === todayStr) return
+
   const { data: habits } = await supabase.from('habits').select('id').eq('user_id', userId).eq('is_active', true)
   const { data: todayLogs } = await supabase.from('habit_logs').select('habit_id').eq('user_id', userId).eq('date', todayStr).eq('completed', true)
 
-  const completedIds = new Set((todayLogs || []).map(l => l.habit_id))
-  const allDone = (habits || []).every(h => completedIds.has(h.id))
-  if (!allDone || (habits || []).length === 0) return
+  // Need at least one habit completed to count as an active day
+  const completedCount = (todayLogs || []).length
+  if (completedCount === 0 || (habits || []).length === 0) return
 
   let newStreak = profile.current_streak
-  if (profile.last_active_date === yesterdayStr) newStreak = profile.current_streak + 1
-  else if (profile.last_active_date !== todayStr) newStreak = 1
+  if (profile.last_active_date === yesterdayStr) {
+    newStreak = profile.current_streak + 1
+  } else {
+    // Gap of more than 1 day — reset to 1 (unless shield was used)
+    newStreak = 1
+  }
 
   await supabase.from('profiles').update({
     current_streak: newStreak,
