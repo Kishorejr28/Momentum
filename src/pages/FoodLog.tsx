@@ -1,6 +1,51 @@
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Plus, Trash2, X, Scale, Lightbulb, Pencil, Check } from 'lucide-react'
+import { Search, Plus, Trash2, X, Scale, Lightbulb, Pencil, Check, ChevronDown } from 'lucide-react'
+
+// Bottom sheet wrapper — always renders above the nav bar
+function BottomSheet({ show, onClose, title, children }: { show: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-40 flex items-end justify-center"
+          style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
+          onClick={onClose}>
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+            onClick={e => e.stopPropagation()}
+            className="w-full max-w-2xl glass rounded-b-none overflow-y-auto"
+            style={{
+              maxHeight: '85vh',
+              paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
+              borderBottomLeftRadius: 0,
+              borderBottomRightRadius: 0,
+            }}>
+            {/* Handle + title */}
+            <div className="flex items-center justify-between px-5 pt-4 pb-3 sticky top-0"
+              style={{ background: 'rgba(var(--surface-raised, 26 26 42) / 0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+              <div className="w-10 h-1 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-2"
+                style={{ background: 'rgba(255,255,255,0.15)' }} />
+              <p className="font-semibold text-sm mt-2" style={{ color: 'rgb(var(--text-primary))' }}>{title}</p>
+              <button onClick={onClose} className="p-1.5 rounded-lg mt-2" style={{ color: 'rgb(var(--text-muted))' }}>
+                <X size={16} />
+              </button>
+            </div>
+            <div className="px-4 pt-3 space-y-3">
+              {children}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  )
+}
 import { foodApi } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { format } from 'date-fns'
@@ -555,297 +600,207 @@ export default function FoodLog() {
         </div>
       </motion.div>
 
-      {/* ── Grams converter ── */}
-      <div ref={panelRef} />
-      <AnimatePresence>
-        {showGrams && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="glass p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <Scale size={16} style={{ color: 'rgb(var(--accent))' }} />
-              <p className="font-semibold text-sm" style={{ color: 'rgb(var(--text-primary))' }}>
-                Convert from Grams
-              </p>
-            </div>
-            <p className="text-xs" style={{ color: 'rgb(var(--text-muted))' }}>
-              Enter a food name + weight in grams — we'll calculate calories & macros automatically
-            </p>
-            <MealSelector selected={selectedMeal} onChange={setSelectedMeal} />
-            <div className="grid grid-cols-3 gap-2">
-              <div className="col-span-2">
-                <input
-                  value={gramsForm.name}
-                  onChange={e => { setGramsForm({ ...gramsForm, name: e.target.value }); setGramsResult(null) }}
-                  placeholder="Food name (e.g. chicken, rice)"
-                  className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
-                  style={{ background: 'rgba(128,128,128,0.08)', border: '1px solid rgba(128,128,128,0.15)', color: 'rgb(var(--text-primary))' }}
-                />
-              </div>
-              <div>
-                <input
-                  type="number"
-                  value={gramsForm.grams}
-                  onChange={e => { setGramsForm({ ...gramsForm, grams: e.target.value }); setGramsResult(null) }}
-                  placeholder="grams"
-                  className="w-full px-3 py-2.5 rounded-xl text-sm outline-none text-center"
-                  style={{ background: 'rgba(128,128,128,0.08)', border: '1px solid rgba(128,128,128,0.15)', color: 'rgb(var(--text-primary))' }}
-                />
-              </div>
-            </div>
-            <button onClick={handleGramsCalc} className="btn-accent w-full py-2.5 text-sm">
-              Calculate
-            </button>
-
-            {/* Result */}
-            <AnimatePresence>
-              {gramsResult && !gramsResult.notFound && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  className="rounded-xl p-3 space-y-2"
-                  style={{ background: `rgba(var(--accent) / 0.08)`, border: `1px solid rgba(var(--accent) / 0.2)` }}>
-                  <p className="text-xs font-semibold" style={{ color: 'rgb(var(--accent))' }}>
-                    {gramsForm.grams}g of {gramsForm.name}
-                  </p>
-                  <div className="grid grid-cols-4 gap-2 text-center">
-                    {[
-                      { label: 'Calories', val: gramsResult.calories, unit: 'kcal', color: 'rgb(var(--accent))' },
-                      { label: 'Protein', val: gramsResult.protein, unit: 'g', color: '#60a5fa' },
-                      { label: 'Carbs', val: gramsResult.carbs, unit: 'g', color: '#f59e0b' },
-                      { label: 'Fat', val: gramsResult.fat, unit: 'g', color: '#f87171' },
-                    ].map(m => (
-                      <div key={m.label} className="rounded-lg p-2" style={{ background: 'rgba(128,128,128,0.08)' }}>
-                        <p className="text-base font-black" style={{ color: m.color }}>{m.val}</p>
-                        <p className="text-[9px] font-medium" style={{ color: 'rgb(var(--text-muted))' }}>{m.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <button onClick={addFromGrams} className="btn-accent w-full py-2.5 text-sm">
-                    Add to {selectedMeal}
-                  </button>
-                </motion.div>
-              )}
-              {gramsResult?.notFound && (
-                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                  className="text-sm rounded-xl p-3 text-center"
-                  style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171' }}>
-                  Food not in our grams database. Try the Search tab or Manual entry.
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Search ── */}
-      <AnimatePresence>
-        {showSearch && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="glass p-4 space-y-3">
-            <MealSelector selected={selectedMeal} onChange={setSelectedMeal} />
-            {/* Search tabs */}
-            <div className="flex rounded-xl overflow-hidden" style={{ background: 'rgba(128,128,128,0.08)' }}>
-              {(['all', 'mine'] as const).map(t => (
-                <button key={t} onClick={() => { setSearchTab(t); if (t === 'mine') loadMyFoods() }}
-                  className="flex-1 py-2 text-xs font-semibold transition-all capitalize"
-                  style={{
-                    background: searchTab === t ? `rgb(var(--accent))` : 'transparent',
-                    color: searchTab === t ? '#000' : 'rgb(var(--text-muted))',
-                    borderRadius: 10,
-                  }}>
-                  {t === 'all' ? '🌍 All Foods' : '⭐ My Foods'}
-                </button>
-              ))}
-            </div>
-
-            {searchTab === 'all' && <>
-              <div className="relative">
-                <Search size={16} className="absolute left-3 top-3.5" style={{ color: 'rgb(var(--text-muted))' }} />
-                <input
-                  value={searchQuery}
-                  onChange={e => handleSearch(e.target.value)}
-                  placeholder="Search — dal, banana, protein bar, schnitzel..."
-                  className="w-full pl-9 pr-4 py-3 rounded-xl text-sm outline-none"
-                  style={{ background: 'rgba(128,128,128,0.08)', border: '1px solid rgba(128,128,128,0.12)', color: 'rgb(var(--text-primary))' }}
-                  autoFocus
-                />
-                {searchQuery && (
-                  <button onClick={() => { setSearchQuery(''); setSearchResults([]) }} className="absolute right-3 top-3.5">
-                    <X size={16} style={{ color: 'rgb(var(--text-muted))' }} />
-                  </button>
-                )}
-              </div>
-              {searching && <p className="text-xs text-center py-1" style={{ color: 'rgb(var(--text-muted))' }}>Searching databases...</p>}
-              {searchResults.length > 0 && (
-                <div className="space-y-1 max-h-56 overflow-y-auto">
-                  {searchResults.map((food: any, i) => (
-                    <FoodResultRow key={i} food={food} onSelect={openQtyPicker} />
-                  ))}
-                </div>
-              )}
-            </>}
-
-            {searchTab === 'mine' && (
-              <div className="space-y-1 max-h-64 overflow-y-auto">
-                {myFoods.length === 0
-                  ? <p className="text-sm text-center py-4" style={{ color: 'rgb(var(--text-muted))' }}>
-                      No saved foods yet — add manually and tap "Save to My Foods"
-                    </p>
-                  : myFoods.map((food: any) => (
-                      <FoodResultRow key={food.id} food={food} onSelect={openQtyPicker}
-                        onDelete={async () => {
-                          await supabase.from('food_items').delete().eq('id', food.id)
-                          loadMyFoods()
-                        }} />
-                    ))
-                }
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Manual entry ── */}
-      <AnimatePresence>
-        {showManual && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="glass p-4 space-y-3">
-            <p className="font-semibold text-sm" style={{ color: 'rgb(var(--text-primary))' }}>Manual Entry</p>
-            <MealSelector selected={selectedMeal} onChange={setSelectedMeal} />
-
-            {/* Food name */}
+      {/* ── Grams converter bottom sheet ── */}
+      <BottomSheet show={showGrams} onClose={() => setShowGrams(false)} title="Convert from Grams">
+        <p className="text-xs" style={{ color: 'rgb(var(--text-muted))' }}>
+          Enter food name + grams → auto-calculates calories & macros
+        </p>
+        <MealSelector selected={selectedMeal} onChange={setSelectedMeal} />
+        <div className="grid grid-cols-3 gap-2">
+          <div className="col-span-2">
             <input
-              value={manual.name}
-              onChange={e => handleManualNameChange(e.target.value)}
-              placeholder="Food name (e.g. Spaghetti)"
-              className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+              value={gramsForm.name}
+              onChange={e => { setGramsForm({ ...gramsForm, name: e.target.value }); setGramsResult(null) }}
+              placeholder="Food name (e.g. chicken, rice)"
+              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none"
+              style={{ background: 'rgba(128,128,128,0.08)', border: '1px solid rgba(128,128,128,0.15)', color: 'rgb(var(--text-primary))' }}
+            />
+          </div>
+          <div>
+            <input type="number" value={gramsForm.grams}
+              onChange={e => { setGramsForm({ ...gramsForm, grams: e.target.value }); setGramsResult(null) }}
+              placeholder="grams"
+              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none text-center"
+              style={{ background: 'rgba(128,128,128,0.08)', border: '1px solid rgba(128,128,128,0.15)', color: 'rgb(var(--text-primary))' }}
+            />
+          </div>
+        </div>
+        <button onClick={handleGramsCalc} className="btn-accent w-full py-2.5 text-sm">Calculate</button>
+        <AnimatePresence>
+          {gramsResult && !gramsResult.notFound && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl p-3 space-y-2"
+              style={{ background: `rgba(var(--accent) / 0.08)`, border: `1px solid rgba(var(--accent) / 0.2)` }}>
+              <p className="text-xs font-semibold" style={{ color: 'rgb(var(--accent))' }}>
+                {gramsForm.grams}g of {gramsForm.name}
+              </p>
+              <div className="grid grid-cols-4 gap-2 text-center">
+                {[
+                  { label: 'Cal', val: gramsResult.calories, color: 'rgb(var(--accent))' },
+                  { label: 'Protein', val: gramsResult.protein, color: '#60a5fa' },
+                  { label: 'Carbs', val: gramsResult.carbs, color: '#f59e0b' },
+                  { label: 'Fat', val: gramsResult.fat, color: '#f87171' },
+                ].map(m => (
+                  <div key={m.label} className="rounded-lg p-2" style={{ background: 'rgba(128,128,128,0.08)' }}>
+                    <p className="text-base font-black" style={{ color: m.color }}>{m.val}</p>
+                    <p className="text-[9px] font-medium" style={{ color: 'rgb(var(--text-muted))' }}>{m.label}</p>
+                  </div>
+                ))}
+              </div>
+              <button onClick={addFromGrams} className="btn-accent w-full py-2.5 text-sm">
+                Add to {selectedMeal}
+              </button>
+            </motion.div>
+          )}
+          {gramsResult?.notFound && (
+            <div className="text-sm rounded-xl p-3 text-center"
+              style={{ background: 'rgba(248,113,113,0.1)', color: '#f87171' }}>
+              Food not in database. Try Search or Manual entry.
+            </div>
+          )}
+        </AnimatePresence>
+        <div className="h-2" />
+      </BottomSheet>
+
+      {/* ── Search bottom sheet ── */}
+      <BottomSheet show={showSearch} onClose={() => { setShowSearch(false); setSearchQuery(''); setSearchResults([]) }} title="Search Food">
+        <MealSelector selected={selectedMeal} onChange={setSelectedMeal} />
+        <div className="flex rounded-xl overflow-hidden" style={{ background: 'rgba(128,128,128,0.08)' }}>
+          {(['all', 'mine'] as const).map(t => (
+            <button key={t} onClick={() => { setSearchTab(t); if (t === 'mine') loadMyFoods() }}
+              className="flex-1 py-2 text-xs font-semibold transition-all capitalize"
+              style={{
+                background: searchTab === t ? `rgb(var(--accent))` : 'transparent',
+                color: searchTab === t ? '#000' : 'rgb(var(--text-muted))',
+                borderRadius: 10,
+              }}>
+              {t === 'all' ? '🌍 All Foods' : '⭐ My Foods'}
+            </button>
+          ))}
+        </div>
+        {searchTab === 'all' && <>
+          <div className="relative">
+            <Search size={16} className="absolute left-3 top-3.5" style={{ color: 'rgb(var(--text-muted))' }} />
+            <input value={searchQuery} onChange={e => handleSearch(e.target.value)}
+              placeholder="Search — dal, banana, protein bar..."
+              className="w-full pl-9 pr-4 py-3 rounded-xl text-sm outline-none"
+              style={{ background: 'rgba(128,128,128,0.08)', border: '1px solid rgba(128,128,128,0.12)', color: 'rgb(var(--text-primary))' }}
+              autoFocus />
+            {searchQuery && (
+              <button onClick={() => { setSearchQuery(''); setSearchResults([]) }} className="absolute right-3 top-3.5">
+                <X size={16} style={{ color: 'rgb(var(--text-muted))' }} />
+              </button>
+            )}
+          </div>
+          {searching && <p className="text-xs text-center py-1" style={{ color: 'rgb(var(--text-muted))' }}>Searching databases...</p>}
+          {searchResults.length > 0 && (
+            <div className="space-y-1">
+              {searchResults.map((food: any, i) => <FoodResultRow key={i} food={food} onSelect={openQtyPicker} />)}
+            </div>
+          )}
+        </>}
+        {searchTab === 'mine' && (
+          <div className="space-y-1">
+            {myFoods.length === 0
+              ? <p className="text-sm text-center py-4" style={{ color: 'rgb(var(--text-muted))' }}>No saved foods yet</p>
+              : myFoods.map((food: any) => (
+                <FoodResultRow key={food.id} food={food} onSelect={openQtyPicker}
+                  onDelete={async () => { await supabase.from('food_items').delete().eq('id', food.id); loadMyFoods() }} />
+              ))
+            }
+          </div>
+        )}
+        <div className="h-2" />
+      </BottomSheet>
+
+      {/* ── Manual entry bottom sheet ── */}
+      <BottomSheet show={showManual} onClose={() => setShowManual(false)} title="Manual Entry">
+        <MealSelector selected={selectedMeal} onChange={setSelectedMeal} />
+        <input value={manual.name} onChange={e => handleManualNameChange(e.target.value)}
+          placeholder="Food name (e.g. Spaghetti)"
+          className="w-full px-4 py-2.5 rounded-xl text-sm outline-none"
+          style={{ background: 'rgba(128,128,128,0.08)', border: '1px solid rgba(128,128,128,0.12)', color: 'rgb(var(--text-primary))' }}
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="text-[10px] font-semibold mb-1 block" style={{ color: 'rgb(var(--text-muted))' }}>Grams (auto-calc)</label>
+            <input type="number" placeholder="e.g. 150"
+              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none text-center"
+              style={{ background: 'rgba(128,128,128,0.08)', border: '1px solid rgba(128,128,128,0.12)', color: 'rgb(var(--text-primary))' }}
+              onChange={e => {
+                const grams = Number(e.target.value)
+                if (!grams || !manual.name) return
+                const result = gramsToMacros(manual.name, grams)
+                if (result) {
+                  setManual(m => ({ ...m, calories: String(result.calories), protein: String(result.protein), carbs: String(result.carbs), fat: String(result.fat) }))
+                  setMacroSuggestion(null)
+                } else {
+                  setMacroSuggestion(suggestMacrosFromCalories(manual.name, grams * 1.5))
+                }
+              }} />
+          </div>
+          <div>
+            <label className="text-[10px] font-semibold mb-1 block" style={{ color: 'rgb(var(--text-muted))' }}>Calories (kcal)</label>
+            <input type="number" value={manual.calories} onChange={e => handleManualCaloriesChange(e.target.value)}
+              placeholder="e.g. 400"
+              className="w-full px-3 py-2.5 rounded-xl text-sm outline-none text-center"
               style={{ background: 'rgba(128,128,128,0.08)', border: '1px solid rgba(128,128,128,0.12)', color: 'rgb(var(--text-primary))' }}
             />
-
-            {/* Grams OR Calories — two options in one row */}
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-[10px] font-semibold mb-1 block" style={{ color: 'rgb(var(--text-muted))' }}>Grams (auto-calc)</label>
-                <input
-                  type="number"
-                  placeholder="e.g. 150"
-                  className="w-full px-3 py-2.5 rounded-xl text-sm outline-none text-center"
-                  style={{ background: 'rgba(128,128,128,0.08)', border: '1px solid rgba(128,128,128,0.12)', color: 'rgb(var(--text-primary))' }}
-                  onChange={e => {
-                    const grams = Number(e.target.value)
-                    if (!grams || !manual.name) return
-                    const result = gramsToMacros(manual.name, grams)
-                    if (result) {
-                      setManual(m => ({
-                        ...m,
-                        calories: String(result.calories),
-                        protein: String(result.protein),
-                        carbs: String(result.carbs),
-                        fat: String(result.fat),
-                      }))
-                      setMacroSuggestion(null)
-                    } else {
-                      // Unknown food — suggest by name only
-                      const suggestion = suggestMacrosFromCalories(manual.name, grams * 1.5)
-                      setMacroSuggestion(suggestion)
-                    }
-                  }}
-                />
+          </div>
+        </div>
+        <AnimatePresence>
+          {macroSuggestion && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl p-3"
+              style={{ background: `rgba(var(--accent)/0.08)`, border: `1px solid rgba(var(--accent)/0.2)` }}>
+              <div className="flex items-center gap-1.5 mb-2">
+                <Lightbulb size={13} style={{ color: 'rgb(var(--accent))' }} />
+                <span className="text-xs font-semibold" style={{ color: 'rgb(var(--accent))' }}>Estimated macros</span>
               </div>
-              <div>
-                <label className="text-[10px] font-semibold mb-1 block" style={{ color: 'rgb(var(--text-muted))' }}>Calories (kcal)</label>
-                <input
-                  type="number"
-                  value={manual.calories}
-                  onChange={e => handleManualCaloriesChange(e.target.value)}
-                  placeholder="e.g. 400"
-                  className="w-full px-3 py-2.5 rounded-xl text-sm outline-none text-center"
-                  style={{ background: 'rgba(128,128,128,0.08)', border: '1px solid rgba(128,128,128,0.12)', color: 'rgb(var(--text-primary))' }}
-                />
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                {[
+                  { label: 'Protein', val: macroSuggestion.protein, color: '#60a5fa' },
+                  { label: 'Carbs', val: macroSuggestion.carbs, color: '#f59e0b' },
+                  { label: 'Fat', val: macroSuggestion.fat, color: '#f87171' },
+                ].map(m => (
+                  <div key={m.label} className="text-center rounded-lg py-1.5" style={{ background: 'rgba(128,128,128,0.08)' }}>
+                    <p className="text-sm font-bold" style={{ color: m.color }}>{m.val}g</p>
+                    <p className="text-[10px]" style={{ color: 'rgb(var(--text-muted))' }}>{m.label}</p>
+                  </div>
+                ))}
               </div>
+              <div className="flex gap-2">
+                <button onClick={applySuggestion} className="flex-1 py-1.5 rounded-lg text-xs font-semibold"
+                  style={{ background: `rgb(var(--accent))`, color: '#000' }}>Apply</button>
+                <button onClick={() => setMacroSuggestion(null)} className="px-3 py-1.5 rounded-lg text-xs"
+                  style={{ background: 'rgba(128,128,128,0.1)', color: 'rgb(var(--text-muted))' }}>Skip</button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { key: 'protein', label: 'Protein (g)', color: '#60a5fa' },
+            { key: 'carbs', label: 'Carbs (g)', color: '#f59e0b' },
+            { key: 'fat', label: 'Fat (g)', color: '#f87171' },
+          ].map(({ key, label, color }) => (
+            <div key={key}>
+              <label className="text-[10px] font-semibold mb-1 block" style={{ color }}>{label}</label>
+              <input type="number" value={(manual as any)[key]}
+                onChange={e => setManual({ ...manual, [key]: e.target.value })}
+                placeholder="0"
+                className="w-full px-3 py-2 rounded-xl text-sm outline-none text-center"
+                style={{ background: 'rgba(128,128,128,0.08)', border: `1px solid rgba(128,128,128,0.12)`, color: 'rgb(var(--text-primary))' }}
+              />
             </div>
-            <p className="text-[10px]" style={{ color: 'rgb(var(--text-muted))' }}>
-              Enter grams to auto-fill macros, OR enter calories manually. Both optional together.
-            </p>
-
-            {/* Macro suggestion */}
-            <AnimatePresence>
-              {macroSuggestion && (
-                <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
-                  className="rounded-xl p-3"
-                  style={{ background: `rgba(var(--accent) / 0.08)`, border: `1px solid rgba(var(--accent) / 0.2)` }}>
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <Lightbulb size={13} style={{ color: 'rgb(var(--accent))' }} />
-                    <span className="text-xs font-semibold" style={{ color: 'rgb(var(--accent))' }}>
-                      Estimated macros
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2 mb-2">
-                    {[
-                      { label: 'Protein', val: macroSuggestion.protein, color: '#60a5fa' },
-                      { label: 'Carbs', val: macroSuggestion.carbs, color: '#f59e0b' },
-                      { label: 'Fat', val: macroSuggestion.fat, color: '#f87171' },
-                    ].map(m => (
-                      <div key={m.label} className="text-center rounded-lg py-1.5" style={{ background: 'rgba(128,128,128,0.08)' }}>
-                        <p className="text-sm font-bold" style={{ color: m.color }}>{m.val}g</p>
-                        <p className="text-[10px]" style={{ color: 'rgb(var(--text-muted))' }}>{m.label}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="flex gap-2">
-                    <button onClick={applySuggestion} className="flex-1 py-1.5 rounded-lg text-xs font-semibold"
-                      style={{ background: `rgb(var(--accent))`, color: '#000' }}>
-                      Apply
-                    </button>
-                    <button onClick={() => setMacroSuggestion(null)} className="px-3 py-1.5 rounded-lg text-xs"
-                      style={{ background: 'rgba(128,128,128,0.1)', color: 'rgb(var(--text-muted))' }}>
-                      Skip
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            {/* Macro fields */}
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { key: 'protein', label: 'Protein (g)', color: '#60a5fa' },
-                { key: 'carbs', label: 'Carbs (g)', color: '#f59e0b' },
-                { key: 'fat', label: 'Fat (g)', color: '#f87171' },
-              ].map(({ key, label, color }) => (
-                <div key={key}>
-                  <label className="text-[10px] font-semibold mb-1 block" style={{ color }}>{label}</label>
-                  <input type="number"
-                    value={(manual as any)[key]}
-                    onChange={e => setManual({ ...manual, [key]: e.target.value })}
-                    placeholder="0"
-                    className="w-full px-3 py-2 rounded-xl text-sm outline-none text-center"
-                    style={{ background: 'rgba(128,128,128,0.08)', border: `1px solid rgba(128,128,128,0.12)`, color: 'rgb(var(--text-primary))' }}
-                  />
-                </div>
-              ))}
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => setShowManual(false)}
-                className="flex-1 py-3 rounded-xl text-sm"
-                style={{ background: 'rgba(128,128,128,0.08)', color: 'rgb(var(--text-secondary))' }}>Cancel</button>
-              <button onClick={() => addManual(true)}
-                className="flex-1 py-3 rounded-xl text-sm font-semibold"
-                style={{ background: `rgba(var(--accent)/0.15)`, color: `rgb(var(--accent))` }}>
-                + Save & Add
-              </button>
-              <button onClick={() => addManual(false)} className="btn-accent flex-1 py-3 text-sm">Add Once</button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          ))}
+        </div>
+        <div className="flex gap-2 pb-2">
+          <button onClick={() => addManual(true)} className="flex-1 py-3 rounded-xl text-sm font-semibold"
+            style={{ background: `rgba(var(--accent)/0.15)`, color: `rgb(var(--accent))` }}>
+            + Save & Add
+          </button>
+          <button onClick={() => addManual(false)} className="btn-accent flex-1 py-3 text-sm">Add Once</button>
+        </div>
+      </BottomSheet>
 
       {/* Logs by meal */}
       {MEAL_TYPES.map(meal => {
