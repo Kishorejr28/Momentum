@@ -23,7 +23,7 @@ function BottomSheet({ show, onClose, title, children }: { show: boolean; onClos
             className="w-full max-w-2xl glass rounded-b-none overflow-y-auto"
             style={{
               maxHeight: '85vh',
-              paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
+              paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))',
               borderBottomLeftRadius: 0,
               borderBottomRightRadius: 0,
             }}>
@@ -793,7 +793,7 @@ export default function FoodLog() {
             </div>
           ))}
         </div>
-        <div className="flex gap-2 pb-2">
+        <div className="flex gap-2 pb-4">
           <button onClick={() => addManual(true)} className="flex-1 py-3 rounded-xl text-sm font-semibold"
             style={{ background: `rgba(var(--accent)/0.15)`, color: `rgb(var(--accent))` }}>
             + Save & Add
