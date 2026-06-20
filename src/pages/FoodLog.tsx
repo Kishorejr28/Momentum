@@ -2,51 +2,72 @@ import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Plus, Trash2, X, Scale, Lightbulb, Pencil, Check, ChevronDown } from 'lucide-react'
 
-function BottomSheet({ show, onClose, title, children, footer }: { show: boolean; onClose: () => void; title: string; children: React.ReactNode; footer?: React.ReactNode }) {
+function BottomSheet({ show, onClose, title, children, footer }: {
+  show: boolean; onClose: () => void; title: string
+  children: React.ReactNode; footer?: React.ReactNode
+}) {
   return (
     <AnimatePresence>
       {show && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
           className="fixed inset-0 z-[60] flex items-end justify-center"
-          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+          style={{ background: 'rgba(0,0,0,0.65)' }}
           onClick={onClose}>
           <motion.div
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 40 }}
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-2xl flex flex-col rounded-t-2xl overflow-hidden"
             style={{
+              width: '100%',
+              maxWidth: '672px',
               maxHeight: '88vh',
-              background: 'rgb(var(--surface-raised, 26 26 42))',
+              display: 'flex',
+              flexDirection: 'column',
+              borderRadius: '20px 20px 0 0',
+              background: 'rgb(22, 22, 34)',
               border: '1px solid rgba(255,255,255,0.08)',
+              overflow: 'hidden',
             }}>
-            {/* Fixed header */}
-            <div className="flex-shrink-0 flex items-center justify-between px-5 py-4"
-              style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-              <div className="w-8 h-1 rounded-full absolute left-1/2 -translate-x-1/2 top-2"
-                style={{ background: 'rgba(255,255,255,0.2)' }} />
-              <p className="font-semibold text-sm" style={{ color: 'rgb(var(--text-primary))' }}>{title}</p>
-              <button onClick={onClose} className="p-1.5 rounded-lg" style={{ color: 'rgb(var(--text-muted))' }}>
+
+            {/* Header — fixed, never scrolls */}
+            <div style={{
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px 20px',
+              borderBottom: '1px solid rgba(255,255,255,0.07)',
+              position: 'relative',
+            }}>
+              <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 32, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
+              <span style={{ fontWeight: 600, fontSize: 14, color: 'rgb(var(--text-primary))' }}>{title}</span>
+              <button onClick={onClose} style={{ padding: 6, color: 'rgba(255,255,255,0.4)', lineHeight: 0 }}>
                 <X size={18} />
               </button>
             </div>
-            {/* Scrollable content */}
-            <div className="overflow-y-auto flex-1 px-4 pt-3 pb-3 space-y-3">
+
+            {/* Scrollable body */}
+            <div style={{
+              flex: 1,
+              overflowY: 'auto',
+              padding: '12px 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+              minHeight: 0,
+            }}>
               {children}
             </div>
-            {/* Sticky footer buttons — always visible */}
+
+            {/* Footer — fixed at bottom, always visible */}
             {footer && (
-              <div className="flex-shrink-0 px-4 pb-safe pt-3"
-                style={{
-                  paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
-                  borderTop: '1px solid rgba(255,255,255,0.06)',
-                  background: 'rgb(var(--surface-raised, 26 26 42))',
-                }}>
+              <div style={{
+                flexShrink: 0,
+                padding: `12px 16px calc(12px + env(safe-area-inset-bottom))`,
+                borderTop: '1px solid rgba(255,255,255,0.07)',
+                background: 'rgb(22, 22, 34)',
+              }}>
                 {footer}
               </div>
             )}
