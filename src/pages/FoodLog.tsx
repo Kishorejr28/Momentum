@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Plus, Trash2, X, Scale, Lightbulb, Pencil, Check, ChevronDown } from 'lucide-react'
 
-// Bottom sheet wrapper — always renders above the nav bar
 function BottomSheet({ show, onClose, title, children }: { show: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
   return (
     <AnimatePresence>
@@ -12,7 +11,7 @@ function BottomSheet({ show, onClose, title, children }: { show: boolean; onClos
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-40 flex items-end justify-center"
-          style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
+          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
           onClick={onClose}>
           <motion.div
             initial={{ y: '100%' }}
@@ -20,24 +19,25 @@ function BottomSheet({ show, onClose, title, children }: { show: boolean; onClos
             exit={{ y: '100%' }}
             transition={{ type: 'spring', stiffness: 400, damping: 40 }}
             onClick={e => e.stopPropagation()}
-            className="w-full max-w-2xl glass rounded-b-none overflow-y-auto"
+            className="w-full max-w-2xl flex flex-col rounded-t-2xl overflow-hidden"
             style={{
-              maxHeight: '85vh',
-              paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))',
-              borderBottomLeftRadius: 0,
-              borderBottomRightRadius: 0,
+              maxHeight: '80vh',
+              background: 'rgb(var(--surface-raised, 26 26 42))',
+              border: '1px solid rgba(255,255,255,0.08)',
             }}>
-            {/* Handle + title */}
-            <div className="flex items-center justify-between px-5 pt-4 pb-3 sticky top-0"
-              style={{ background: 'rgba(var(--surface-raised, 26 26 42) / 0.95)', backdropFilter: 'blur(12px)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-              <div className="w-10 h-1 rounded-full mx-auto absolute left-1/2 -translate-x-1/2 top-2"
-                style={{ background: 'rgba(255,255,255,0.15)' }} />
-              <p className="font-semibold text-sm mt-2" style={{ color: 'rgb(var(--text-primary))' }}>{title}</p>
-              <button onClick={onClose} className="p-1.5 rounded-lg mt-2" style={{ color: 'rgb(var(--text-muted))' }}>
-                <X size={16} />
+            {/* Fixed header */}
+            <div className="flex items-center justify-between px-5 py-4 flex-shrink-0"
+              style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+              <div className="w-8 h-1 rounded-full absolute left-1/2 -translate-x-1/2 top-2"
+                style={{ background: 'rgba(255,255,255,0.2)' }} />
+              <p className="font-semibold text-sm" style={{ color: 'rgb(var(--text-primary))' }}>{title}</p>
+              <button onClick={onClose} className="p-1.5 rounded-lg" style={{ color: 'rgb(var(--text-muted))' }}>
+                <X size={18} />
               </button>
             </div>
-            <div className="px-4 pt-3 space-y-3">
+            {/* Scrollable content */}
+            <div className="overflow-y-auto flex-1 px-4 pt-3 space-y-3"
+              style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}>
               {children}
             </div>
           </motion.div>

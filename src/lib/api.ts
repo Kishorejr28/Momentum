@@ -34,6 +34,31 @@ export const userApi = {
       .select('*, badges(*)')
       .eq('user_id', user.id)
 
+    // Check if streak should be reset — runs on every app load
+    const todayStr = today()
+    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1)
+    const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
+
+    const hasActiveStreak = profile.current_streak > 0
+    const lastActive = profile.last_active_date
+    const missedDays = lastActive && lastActive !== todayStr && lastActive !== yesterdayStr
+
+    if (hasActiveStreak && missedDays) {
+      // Check if a freeze shield covers the gap
+      const daysSinceActive = lastActive
+        ? Math.floor((new Date(todayStr).getTime() - new Date(lastActive).getTime()) / 86400000)
+        : 999
+
+      if (daysSinceActive > 1) {
+        // Reset streak — missed more than 1 day with no shield covering
+        await supabase.from('profiles')
+          .update({ current_streak: 0, last_active_date: null })
+          .eq('id', user.id)
+        profile.current_streak = 0
+        profile.last_active_date = null
+      }
+    }
+
     return { ...profile, badges: userBadges || [] }
   },
 
