@@ -10,7 +10,7 @@ function BottomSheet({ show, onClose, title, children }: { show: boolean; onClos
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-40 flex items-end justify-center"
+          className="fixed inset-0 z-[60] flex items-end justify-center"
           style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
           onClick={onClose}>
           <motion.div
@@ -245,7 +245,7 @@ function QtyPicker({ food, meal, onConfirm, onCancel }: { food: any; meal: strin
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end justify-center p-4"
+      className="fixed inset-0 z-[60] flex items-end justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
       onClick={onCancel}>
       <motion.div
