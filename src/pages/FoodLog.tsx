@@ -2,16 +2,15 @@ import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Plus, Trash2, X, Scale, Lightbulb, Pencil, Check, ChevronDown } from 'lucide-react'
 
-function BottomSheet({ show, onClose, title, children, footer }: {
-  show: boolean; onClose: () => void; title: string
-  children: React.ReactNode; footer?: React.ReactNode
+function BottomSheet({ show, onClose, title, children }: {
+  show: boolean; onClose: () => void; title: string; children: React.ReactNode
 }) {
   return (
     <AnimatePresence>
       {show && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-end justify-center"
+          className="fixed inset-0 z-[60] flex items-end"
           style={{ background: 'rgba(0,0,0,0.65)' }}
           onClick={onClose}>
           <motion.div
@@ -20,57 +19,25 @@ function BottomSheet({ show, onClose, title, children, footer }: {
             onClick={e => e.stopPropagation()}
             style={{
               width: '100%',
-              maxWidth: '672px',
-              maxHeight: '88vh',
-              display: 'flex',
-              flexDirection: 'column',
+              maxHeight: '90vh',
               borderRadius: '20px 20px 0 0',
               background: 'rgb(22, 22, 34)',
               border: '1px solid rgba(255,255,255,0.08)',
-              overflow: 'hidden',
-            }}>
-
-            {/* Header — fixed, never scrolls */}
-            <div style={{
-              flexShrink: 0,
               display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '16px 20px',
-              borderBottom: '1px solid rgba(255,255,255,0.07)',
-              position: 'relative',
+              flexDirection: 'column',
             }}>
+            {/* Header */}
+            <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', position: 'relative' }}>
               <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 32, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
-              <span style={{ fontWeight: 600, fontSize: 14, color: 'rgb(var(--text-primary))' }}>{title}</span>
-              <button onClick={onClose} style={{ padding: 6, color: 'rgba(255,255,255,0.4)', lineHeight: 0 }}>
+              <span style={{ fontWeight: 600, fontSize: 14, color: 'rgb(248,248,255)' }}>{title}</span>
+              <button onClick={onClose} style={{ padding: 6, color: 'rgba(255,255,255,0.4)', lineHeight: 0, background: 'none', border: 'none' }}>
                 <X size={18} />
               </button>
             </div>
-
-            {/* Scrollable body */}
-            <div style={{
-              flex: 1,
-              overflowY: 'auto',
-              padding: '12px 16px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 12,
-              minHeight: 0,
-            }}>
+            {/* All content scrolls — buttons are at the bottom of the scroll area */}
+            <div style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}>
               {children}
             </div>
-
-            {/* Footer — fixed at bottom, always visible */}
-            {footer && (
-              <div style={{
-                flexShrink: 0,
-                padding: `12px 16px calc(12px + env(safe-area-inset-bottom))`,
-                borderTop: '1px solid rgba(255,255,255,0.07)',
-                background: 'rgb(22, 22, 34)',
-              }}>
-                {footer}
-              </div>
-            )}
           </motion.div>
         </motion.div>
       )}
@@ -632,16 +599,7 @@ export default function FoodLog() {
       </motion.div>
 
       {/* ── Grams converter bottom sheet ── */}
-      <BottomSheet show={showGrams} onClose={() => setShowGrams(false)} title="Convert from Grams"
-        footer={
-          gramsResult && !gramsResult.notFound
-            ? <button onClick={addFromGrams} className="btn-accent w-full py-3 text-sm">
-                Add to {selectedMeal}
-              </button>
-            : <button onClick={handleGramsCalc} className="btn-accent w-full py-3 text-sm">
-                Calculate
-              </button>
-        }>
+      <BottomSheet show={showGrams} onClose={() => setShowGrams(false)} title="Convert from Grams">
         <p className="text-xs" style={{ color: 'rgb(var(--text-muted))' }}>
           Enter food name + grams → auto-calculates calories & macros
         </p>
@@ -665,7 +623,7 @@ export default function FoodLog() {
             />
           </div>
         </div>
-        <button onClick={handleGramsCalc} className="btn-accent w-full py-2.5 text-sm hidden">Calculate</button>
+        <button onClick={handleGramsCalc} className="btn-accent w-full py-2.5 text-sm">Calculate</button>
         <AnimatePresence>
           {gramsResult && !gramsResult.notFound && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl p-3 space-y-2"
@@ -686,7 +644,7 @@ export default function FoodLog() {
                   </div>
                 ))}
               </div>
-              <button onClick={addFromGrams} className="btn-accent w-full py-2.5 text-sm hidden">
+              <button onClick={addFromGrams} className="btn-accent w-full py-2.5 text-sm">
                 Add to {selectedMeal}
               </button>
             </motion.div>
@@ -752,16 +710,7 @@ export default function FoodLog() {
         <div className="h-2" />
       </BottomSheet>
 
-      <BottomSheet show={showManual} onClose={() => setShowManual(false)} title="Manual Entry"
-        footer={
-          <div className="flex gap-2">
-            <button onClick={() => addManual(true)} className="flex-1 py-3 rounded-xl text-sm font-semibold"
-              style={{ background: `rgba(var(--accent)/0.15)`, color: `rgb(var(--accent))` }}>
-              + Save & Add
-            </button>
-            <button onClick={() => addManual(false)} className="btn-accent flex-1 py-3 text-sm">Add Once</button>
-          </div>
-        }>
+      <BottomSheet show={showManual} onClose={() => setShowManual(false)} title="Manual Entry">
         <MealSelector selected={selectedMeal} onChange={setSelectedMeal} />
         <input value={manual.name} onChange={e => handleManualNameChange(e.target.value)}
           placeholder="Food name (e.g. Spaghetti)"
@@ -841,7 +790,14 @@ export default function FoodLog() {
             </div>
           ))}
         </div>
-        <div className="h-1" />
+        <div className="flex gap-2">
+          <button onClick={() => addManual(true)} className="flex-1 py-3 rounded-xl text-sm font-semibold"
+            style={{ background: `rgba(var(--accent)/0.15)`, color: `rgb(var(--accent))` }}>
+            + Save & Add
+          </button>
+          <button onClick={() => addManual(false)} className="btn-accent flex-1 py-3 text-sm">Add Once</button>
+        </div>
+        <div className="h-2" />
       </BottomSheet>
 
       {/* Logs by meal */}
