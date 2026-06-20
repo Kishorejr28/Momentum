@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Plus, Trash2, X, Scale, Lightbulb, Pencil, Check, ChevronDown } from 'lucide-react'
 
-function BottomSheet({ show, onClose, title, children }: { show: boolean; onClose: () => void; title: string; children: React.ReactNode }) {
+function BottomSheet({ show, onClose, title, children, footer }: { show: boolean; onClose: () => void; title: string; children: React.ReactNode; footer?: React.ReactNode }) {
   return (
     <AnimatePresence>
       {show && (
@@ -21,12 +21,12 @@ function BottomSheet({ show, onClose, title, children }: { show: boolean; onClos
             onClick={e => e.stopPropagation()}
             className="w-full max-w-2xl flex flex-col rounded-t-2xl overflow-hidden"
             style={{
-              maxHeight: '80vh',
+              maxHeight: '88vh',
               background: 'rgb(var(--surface-raised, 26 26 42))',
               border: '1px solid rgba(255,255,255,0.08)',
             }}>
             {/* Fixed header */}
-            <div className="flex items-center justify-between px-5 py-4 flex-shrink-0"
+            <div className="flex-shrink-0 flex items-center justify-between px-5 py-4"
               style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               <div className="w-8 h-1 rounded-full absolute left-1/2 -translate-x-1/2 top-2"
                 style={{ background: 'rgba(255,255,255,0.2)' }} />
@@ -36,10 +36,20 @@ function BottomSheet({ show, onClose, title, children }: { show: boolean; onClos
               </button>
             </div>
             {/* Scrollable content */}
-            <div className="overflow-y-auto flex-1 px-4 pt-3 space-y-3"
-              style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}>
+            <div className="overflow-y-auto flex-1 px-4 pt-3 pb-3 space-y-3">
               {children}
             </div>
+            {/* Sticky footer buttons — always visible */}
+            {footer && (
+              <div className="flex-shrink-0 px-4 pb-safe pt-3"
+                style={{
+                  paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
+                  borderTop: '1px solid rgba(255,255,255,0.06)',
+                  background: 'rgb(var(--surface-raised, 26 26 42))',
+                }}>
+                {footer}
+              </div>
+            )}
           </motion.div>
         </motion.div>
       )}
@@ -601,7 +611,16 @@ export default function FoodLog() {
       </motion.div>
 
       {/* ── Grams converter bottom sheet ── */}
-      <BottomSheet show={showGrams} onClose={() => setShowGrams(false)} title="Convert from Grams">
+      <BottomSheet show={showGrams} onClose={() => setShowGrams(false)} title="Convert from Grams"
+        footer={
+          gramsResult && !gramsResult.notFound
+            ? <button onClick={addFromGrams} className="btn-accent w-full py-3 text-sm">
+                Add to {selectedMeal}
+              </button>
+            : <button onClick={handleGramsCalc} className="btn-accent w-full py-3 text-sm">
+                Calculate
+              </button>
+        }>
         <p className="text-xs" style={{ color: 'rgb(var(--text-muted))' }}>
           Enter food name + grams → auto-calculates calories & macros
         </p>
@@ -625,7 +644,7 @@ export default function FoodLog() {
             />
           </div>
         </div>
-        <button onClick={handleGramsCalc} className="btn-accent w-full py-2.5 text-sm">Calculate</button>
+        <button onClick={handleGramsCalc} className="btn-accent w-full py-2.5 text-sm hidden">Calculate</button>
         <AnimatePresence>
           {gramsResult && !gramsResult.notFound && (
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-xl p-3 space-y-2"
@@ -646,7 +665,7 @@ export default function FoodLog() {
                   </div>
                 ))}
               </div>
-              <button onClick={addFromGrams} className="btn-accent w-full py-2.5 text-sm">
+              <button onClick={addFromGrams} className="btn-accent w-full py-2.5 text-sm hidden">
                 Add to {selectedMeal}
               </button>
             </motion.div>
@@ -712,8 +731,16 @@ export default function FoodLog() {
         <div className="h-2" />
       </BottomSheet>
 
-      {/* ── Manual entry bottom sheet ── */}
-      <BottomSheet show={showManual} onClose={() => setShowManual(false)} title="Manual Entry">
+      <BottomSheet show={showManual} onClose={() => setShowManual(false)} title="Manual Entry"
+        footer={
+          <div className="flex gap-2">
+            <button onClick={() => addManual(true)} className="flex-1 py-3 rounded-xl text-sm font-semibold"
+              style={{ background: `rgba(var(--accent)/0.15)`, color: `rgb(var(--accent))` }}>
+              + Save & Add
+            </button>
+            <button onClick={() => addManual(false)} className="btn-accent flex-1 py-3 text-sm">Add Once</button>
+          </div>
+        }>
         <MealSelector selected={selectedMeal} onChange={setSelectedMeal} />
         <input value={manual.name} onChange={e => handleManualNameChange(e.target.value)}
           placeholder="Food name (e.g. Spaghetti)"
@@ -793,13 +820,7 @@ export default function FoodLog() {
             </div>
           ))}
         </div>
-        <div className="flex gap-2 pb-4">
-          <button onClick={() => addManual(true)} className="flex-1 py-3 rounded-xl text-sm font-semibold"
-            style={{ background: `rgba(var(--accent)/0.15)`, color: `rgb(var(--accent))` }}>
-            + Save & Add
-          </button>
-          <button onClick={() => addManual(false)} className="btn-accent flex-1 py-3 text-sm">Add Once</button>
-        </div>
+        <div className="h-1" />
       </BottomSheet>
 
       {/* Logs by meal */}
