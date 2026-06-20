@@ -10,7 +10,7 @@ function BottomSheet({ show, onClose, title, children }: {
       {show && (
         <motion.div
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] flex items-end"
+          className="fixed inset-0 z-[60]"
           style={{ background: 'rgba(0,0,0,0.65)' }}
           onClick={onClose}>
           <motion.div
@@ -18,15 +18,19 @@ function BottomSheet({ show, onClose, title, children }: {
             transition={{ type: 'spring', stiffness: 400, damping: 40 }}
             onClick={e => e.stopPropagation()}
             style={{
-              width: '100%',
-              maxHeight: '90vh',
+              position: 'absolute',
+              bottom: 0,
+              left: 0,
+              right: 0,
+              height: '85vh',
               borderRadius: '20px 20px 0 0',
               background: 'rgb(22, 22, 34)',
               border: '1px solid rgba(255,255,255,0.08)',
               display: 'flex',
               flexDirection: 'column',
+              overflow: 'hidden',
             }}>
-            {/* Header */}
+            {/* Header — fixed */}
             <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', position: 'relative' }}>
               <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 32, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
               <span style={{ fontWeight: 600, fontSize: 14, color: 'rgb(248,248,255)' }}>{title}</span>
@@ -34,8 +38,18 @@ function BottomSheet({ show, onClose, title, children }: {
                 <X size={18} />
               </button>
             </div>
-            {/* All content scrolls — buttons are at the bottom of the scroll area */}
-            <div style={{ overflowY: 'auto', WebkitOverflowScrolling: 'touch', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 'calc(24px + env(safe-area-inset-bottom))' }}>
+            {/* Scrollable content — explicit height triggers iOS scroll */}
+            <div style={{
+              flex: 1,
+              height: 0,
+              overflowY: 'scroll',
+              WebkitOverflowScrolling: 'touch',
+              padding: '12px 16px',
+              paddingBottom: 'calc(32px + env(safe-area-inset-bottom))',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 12,
+            }}>
               {children}
             </div>
           </motion.div>
