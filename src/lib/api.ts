@@ -20,10 +20,10 @@ export const userApi = {
       .single()
 
     if (profileErr || !profile) {
-      // Profile missing — create it
+      // Profile missing — create it with 1 free freeze shield on signup
       const { error: insertErr } = await supabase
         .from('profiles')
-        .insert({ id: user.id, name: 'Champion', calorie_goal: 2000 })
+        .insert({ id: user.id, name: 'Champion', calorie_goal: 2000, freeze_shields: 1 })
       if (insertErr) { console.error('profile insert error:', insertErr); return null }
       const { data: fresh } = await supabase.from('profiles').select('*').eq('id', user.id).single()
       return { ...fresh, badges: [] }
@@ -508,6 +508,9 @@ async function checkBadges(userId: string) {
 
   const streakMap: Record<number, string> = { 7: 'streak_7', 14: 'streak_14', 30: 'streak_30', 60: 'streak_60', 100: 'streak_100' }
 
+  // Milestones that earn a freeze shield
+  const shieldMilestones = new Set([7, 30, 60, 100])
+
   for (const [days, key] of Object.entries(streakMap)) {
     if (profile.current_streak >= Number(days)) {
       const { data: badge } = await supabase.from('badges').select('id').eq('key', key).single()
@@ -515,8 +518,11 @@ async function checkBadges(userId: string) {
       const { data: existing } = await supabase.from('user_badges').select('id').eq('user_id', userId).eq('badge_id', badge.id).maybeSingle()
       if (!existing) {
         await supabase.from('user_badges').insert({ user_id: userId, badge_id: badge.id })
-        if (Number(days) === 7 || Number(days) === 30) {
-          await supabase.from('profiles').update({ freeze_shields: Math.min(profile.freeze_shields + 1, 2) }).eq('id', userId)
+        // Award a freeze shield at each milestone (max 2)
+        if (shieldMilestones.has(Number(days))) {
+          const newShields = Math.min(profile.freeze_shields + 1, 2)
+          await supabase.from('profiles').update({ freeze_shields: newShields }).eq('id', userId)
+          profile.freeze_shields = newShields // update local copy for next iteration
         }
       }
     }

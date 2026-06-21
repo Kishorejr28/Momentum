@@ -134,13 +134,24 @@ export default function Habits() {
   const today = format(new Date(), 'yyyy-MM-dd')
 
   useEffect(() => {
-    habitsApi.getAll(today).then(setHabits)
+    habitsApi.getAll(today).then(data => {
+      const sorted = [...data].sort((a: any, b: any) => {
+        if (a.completedToday === b.completedToday) return 0
+        return a.completedToday ? 1 : -1
+      })
+      setHabits(sorted)
+    })
   }, [])
 
   const handleToggle = async (id: string) => {
     await habitsApi.toggle(id, today)
     const updated = await habitsApi.getAll(today)
-    setHabits(updated)
+    // Incomplete on top, completed at bottom
+    const sorted = [...updated].sort((a: any, b: any) => {
+      if (a.completedToday === b.completedToday) return 0
+      return a.completedToday ? 1 : -1
+    })
+    setHabits(sorted)
     const updatedUser = await userApi.get()
     setUser(updatedUser)
   }
@@ -215,7 +226,7 @@ export default function Habits() {
             Freeze Shields: {user?.freeze_shields ?? user?.freezeShields ?? 0}/2
           </p>
           <p className="text-[11px] mt-0.5" style={{ color: 'rgb(var(--text-muted))' }}>
-            Earn by: 7-day streak, perfect week, 30-day milestone
+            Earn by: 7, 30, 60, 100 day streaks · 1 free on signup
           </p>
         </div>
       </div>
