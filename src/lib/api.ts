@@ -224,24 +224,27 @@ export const foodApi = {
           })))
         .catch(() => [] as any[]),
 
-      // 3. USDA FoodData — raw ingredients, very accurate macros
+      // 3. USDA FoodData — filter to realistic cooked/prepared foods only
       fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&pageSize=6&dataType=Foundation,SR%20Legacy&api_key=DEMO_KEY`)
         .then(r => r.json())
         .then((data: any) => (data.foods || []).slice(0, 6).map((f: any) => {
           const get = (n: string) => f.foodNutrients?.find((x: any) => x.nutrientName === n)?.value || 0
+          const cal = Math.round(get('Energy'))
+          // Filter out unrealistic raw grain entries (>700 kcal/100g = dry ingredient, not useful)
+          if (cal > 700 || cal === 0) return null
           return {
             id: `usda_${f.fdcId}`,
             name: f.description?.toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
             brand: f.brandOwner || null,
             source: 'usda',
-            calories: Math.round(get('Energy')),
+            calories: cal,
             protein: Math.round(get('Protein') * 10) / 10,
             carbs: Math.round(get('Carbohydrate, by difference') * 10) / 10,
             fat: Math.round(get('Total lipid (fat)') * 10) / 10,
             fiber: Math.round(get('Fiber, total dietary') * 10) / 10,
             serving_unit: '100g',
           }
-        }))
+        }).filter(Boolean))
         .catch(() => [] as any[]),
     ])
 

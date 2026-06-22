@@ -214,7 +214,7 @@ function FoodResultRow({ food, onSelect, onDelete }: { food: any; onSelect: (f: 
   )
 }
 
-// Quantity picker modal
+// Quantity picker — full-height bottom sheet, always scrollable
 function QtyPicker({ food, meal, onConfirm, onCancel }: { food: any; meal: string; onConfirm: (qty: number, unit: string) => void; onCancel: () => void }) {
   const baseUnit = food.serving_unit || food.servingUnit || '100g'
   const basePer100 = baseUnit === '100g' || baseUnit === 'g' || baseUnit === 'ml'
@@ -228,13 +228,13 @@ function QtyPicker({ food, meal, onConfirm, onCancel }: { food: any; meal: strin
     { label: 'Volume', units: ['ml', 'l'] },
   ]
 
-  // Convert qty+unit → multiplier relative to food base (per 100g or per serving)
+  const unitGrams: Record<string, number> = {
+    serving: 100, slice: 28, piece: 100, bowl: 250,
+    cup: 240, scoop: 30, bar: 55, tbsp: 15,
+  }
+
   const getMultiplier = (q: number, u: string): number => {
     if (!q) return 0
-    const unitGrams: Record<string, number> = {
-      serving: 100, slice: 30, piece: 60, bowl: 250,
-      cup: 240, scoop: 30, bar: 50, tbsp: 15,
-    }
     if (basePer100) {
       if (u === 'g' || u === 'ml') return q / 100
       if (u === 'kg' || u === 'l') return (q * 1000) / 100
@@ -256,80 +256,89 @@ function QtyPicker({ food, meal, onConfirm, onCancel }: { food: any; meal: strin
   }
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[60] flex items-end justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(6px)' }}
-      onClick={onCancel}>
-      <motion.div
-        initial={{ y: 60, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 60, opacity: 0 }}
-        onClick={e => e.stopPropagation()}
-        className="w-full max-w-sm glass p-5 space-y-4 mb-2">
+    <AnimatePresence>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[60]"
+        style={{ background: 'rgba(0,0,0,0.65)' }}
+        onClick={onCancel}>
+        <motion.div
+          initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+          transition={{ type: 'spring', stiffness: 400, damping: 40 }}
+          onClick={e => e.stopPropagation()}
+          style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            height: '85vh',
+            borderRadius: '20px 20px 0 0',
+            background: 'rgb(22, 22, 34)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          }}>
+          {/* Header */}
+          <div style={{ flexShrink: 0, padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)', position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ position: 'absolute', top: 8, left: '50%', transform: 'translateX(-50%)', width: 32, height: 4, borderRadius: 2, background: 'rgba(255,255,255,0.2)' }} />
+            <div>
+              <p style={{ fontWeight: 600, fontSize: 14, color: 'rgb(248,248,255)', marginTop: 4 }}>{food.name}</p>
+              {food.brand && <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{food.brand}</p>}
+              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 2 }}>{food.calories} kcal per {baseUnit}</p>
+            </div>
+            <button onClick={onCancel} style={{ marginTop: 4, padding: 6, color: 'rgba(255,255,255,0.4)', lineHeight: 0, background: 'none', border: 'none' }}>
+              <X size={18} />
+            </button>
+          </div>
 
-        <div>
-          <p className="font-bold text-sm" style={{ color: 'rgb(var(--text-primary))' }}>{food.name}</p>
-          {food.brand && <p className="text-[11px]" style={{ color: 'rgb(var(--text-muted))' }}>{food.brand}</p>}
-          <p className="text-xs mt-0.5" style={{ color: 'rgb(var(--text-muted))' }}>
-            {food.calories} kcal per {baseUnit}
-          </p>
-        </div>
+          {/* Scrollable content */}
+          <div style={{ flex: 1, height: 0, overflowY: 'scroll', WebkitOverflowScrolling: 'touch', padding: '16px', paddingBottom: 'calc(24px + env(safe-area-inset-bottom))', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* Quantity input */}
-        <div>
-          <label className="text-[10px] font-semibold mb-1.5 block" style={{ color: 'rgb(var(--text-muted))' }}>How much?</label>
-          <input type="number" value={qty} onChange={e => setQty(e.target.value)} min="0"
-            autoFocus
-            className="w-full px-3 py-3 rounded-xl text-2xl font-black text-center outline-none"
-            style={{ background: 'rgba(128,128,128,0.08)', border: `2px solid rgba(var(--accent)/0.5)`, color: 'rgb(var(--text-primary))' }} />
-        </div>
+            <input type="number" value={qty} onChange={e => setQty(e.target.value)} min="0" autoFocus
+              style={{ width: '100%', padding: '14px', borderRadius: 14, background: 'rgba(128,128,128,0.1)', border: '2px solid rgba(99,102,241,0.5)', color: 'rgb(248,248,255)', fontSize: 28, fontWeight: 800, textAlign: 'center', outline: 'none', boxSizing: 'border-box' }} />
 
-        {/* Unit button groups — no native select */}
-        <div className="space-y-2">
-          {UNIT_GROUPS.map(group => (
-            <div key={group.label}>
-              <p className="text-[10px] font-semibold mb-1.5" style={{ color: 'rgb(var(--text-muted))' }}>{group.label}</p>
-              <div className="flex flex-wrap gap-1.5">
-                {group.units.map(u => (
-                  <button key={u} onClick={() => setUnit(u)}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all"
-                    style={{
-                      background: unit === u ? `rgb(var(--accent))` : 'rgba(128,128,128,0.12)',
-                      color: unit === u ? '#000' : 'rgb(var(--text-secondary))',
-                      border: unit === u ? 'none' : '1px solid rgba(128,128,128,0.15)',
-                    }}>
-                    {u}
-                  </button>
-                ))}
+            {UNIT_GROUPS.map(group => (
+              <div key={group.label}>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 8, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{group.label}</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {group.units.map(u => (
+                    <button key={u} onClick={() => setUnit(u)} style={{
+                      padding: '8px 16px', borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                      background: unit === u ? 'rgb(99,102,241)' : 'rgba(128,128,128,0.12)',
+                      color: unit === u ? '#000' : 'rgba(255,255,255,0.6)',
+                      border: '1px solid ' + (unit === u ? 'transparent' : 'rgba(128,128,128,0.15)'),
+                    }}>{u}</button>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
 
-        {/* Live macro preview */}
-        <div className="grid grid-cols-4 gap-2 text-center rounded-xl p-3"
-          style={{ background: `rgba(var(--accent)/0.08)`, border: `1px solid rgba(var(--accent)/0.15)` }}>
-          {[
-            { label: 'Cal', val: preview.calories, color: 'rgb(var(--accent))' },
-            { label: 'Protein', val: `${preview.protein}g`, color: '#60a5fa' },
-            { label: 'Carbs', val: `${preview.carbs}g`, color: '#f59e0b' },
-            { label: 'Fat', val: `${preview.fat}g`, color: '#f87171' },
-          ].map(m => (
-            <div key={m.label}>
-              <p className="text-base font-black" style={{ color: m.color }}>{m.val}</p>
-              <p className="text-[9px]" style={{ color: 'rgb(var(--text-muted))' }}>{m.label}</p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8, padding: 12, background: 'rgba(99,102,241,0.08)', borderRadius: 14, border: '1px solid rgba(99,102,241,0.2)' }}>
+              {[
+                { label: 'Cal', val: String(preview.calories), color: 'rgb(99,102,241)' },
+                { label: 'Protein', val: `${preview.protein}g`, color: '#60a5fa' },
+                { label: 'Carbs', val: `${preview.carbs}g`, color: '#f59e0b' },
+                { label: 'Fat', val: `${preview.fat}g`, color: '#f87171' },
+              ].map(m => (
+                <div key={m.label} style={{ textAlign: 'center' }}>
+                  <p style={{ fontSize: 16, fontWeight: 800, color: m.color }}>{m.val}</p>
+                  <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>{m.label}</p>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        <div className="flex gap-3">
-          <button onClick={onCancel} className="flex-1 py-3 rounded-xl text-sm"
-            style={{ background: 'rgba(128,128,128,0.08)', color: 'rgb(var(--text-muted))' }}>Cancel</button>
-          <button onClick={() => onConfirm(multiplier, unit)} disabled={preview.calories === 0}
-            className="btn-accent flex-1 py-3 text-sm">
-            Add to {meal}
-          </button>
-        </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={onCancel} style={{ flex: 1, padding: 14, borderRadius: 12, fontSize: 14, fontWeight: 600, background: 'rgba(128,128,128,0.12)', color: 'rgba(255,255,255,0.5)', border: 'none', cursor: 'pointer' }}>
+                Cancel
+              </button>
+              <button onClick={() => onConfirm(multiplier, unit)} disabled={preview.calories === 0} style={{
+                flex: 1, padding: 14, borderRadius: 12, fontSize: 14, fontWeight: 700, cursor: 'pointer',
+                background: 'rgb(99,102,241)', color: '#000', border: 'none',
+                opacity: preview.calories === 0 ? 0.5 : 1,
+                boxShadow: '0 4px 20px rgba(99,102,241,0.4)',
+              }}>
+                Add to {meal}
+              </button>
+            </div>
+          </div>
+        </motion.div>
       </motion.div>
-    </motion.div>
+    </AnimatePresence>
   )
 }
 
