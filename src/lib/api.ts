@@ -193,55 +193,68 @@ export const foodApi = {
   search: async (q: string) => {
     if (!q.trim()) return []
 
-    // 1. Local seeded food_items table
+    const query = q.trim()
+
+    // 1. Local seeded DB — show first (instant, includes all Indian/German foods)
     const { data: local } = await supabase
       .from('food_items')
       .select('*')
-      .ilike('name', `%${q}%`)
-      .limit(8)
+      .ilike('name', `%${query}%`)
+      .limit(12)
 
-    // 2. Open Food Facts
-    let offResults: any[] = []
-    try {
-      const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&json=1&page_size=5&fields=product_name,brands,nutriments,serving_size`)
-      const data: any = await res.json()
-      offResults = (data.products || [])
-        .filter((p: any) => p.nutriments?.['energy-kcal_100g'])
-        .map((p: any) => ({
-          id: `off_${p.code}`,
-          name: p.product_name || q,
-          brand: p.brands || null,
-          source: 'openfoodfacts',
-          calories: Math.round(p.nutriments['energy-kcal_100g'] || 0),
-          protein: Math.round((p.nutriments['proteins_100g'] || 0) * 10) / 10,
-          carbs: Math.round((p.nutriments['carbohydrates_100g'] || 0) * 10) / 10,
-          fat: Math.round((p.nutriments['fat_100g'] || 0) * 10) / 10,
-          serving_unit: '100g',
+    // Run external searches in parallel
+    const [offResults, usdaResults] = await Promise.all([
+      // 2. Open Food Facts — 3M+ products, no key needed, includes branded/packaged
+      fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&json=1&page_size=8&fields=product_name,brands,nutriments,code`)
+        .then(r => r.json())
+        .then((data: any) => (data.products || [])
+          .filter((p: any) => p.product_name && p.nutriments?.['energy-kcal_100g'] > 0)
+          .slice(0, 8)
+          .map((p: any) => ({
+            id: `off_${p.code}`,
+            name: p.product_name,
+            brand: p.brands?.split(',')[0]?.trim() || null,
+            source: 'openfoodfacts',
+            calories: Math.round(p.nutriments['energy-kcal_100g'] || 0),
+            protein: Math.round((p.nutriments['proteins_100g'] || 0) * 10) / 10,
+            carbs: Math.round((p.nutriments['carbohydrates_100g'] || 0) * 10) / 10,
+            fat: Math.round((p.nutriments['fat_100g'] || 0) * 10) / 10,
+            fiber: Math.round((p.nutriments['fiber_100g'] || 0) * 10) / 10,
+            serving_unit: '100g',
+          })))
+        .catch(() => [] as any[]),
+
+      // 3. USDA FoodData — raw ingredients, very accurate macros
+      fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(query)}&pageSize=6&dataType=Foundation,SR%20Legacy&api_key=DEMO_KEY`)
+        .then(r => r.json())
+        .then((data: any) => (data.foods || []).slice(0, 6).map((f: any) => {
+          const get = (n: string) => f.foodNutrients?.find((x: any) => x.nutrientName === n)?.value || 0
+          return {
+            id: `usda_${f.fdcId}`,
+            name: f.description?.toLowerCase().replace(/\b\w/g, (c: string) => c.toUpperCase()),
+            brand: f.brandOwner || null,
+            source: 'usda',
+            calories: Math.round(get('Energy')),
+            protein: Math.round(get('Protein') * 10) / 10,
+            carbs: Math.round(get('Carbohydrate, by difference') * 10) / 10,
+            fat: Math.round(get('Total lipid (fat)') * 10) / 10,
+            fiber: Math.round(get('Fiber, total dietary') * 10) / 10,
+            serving_unit: '100g',
+          }
         }))
-    } catch (_) {}
+        .catch(() => [] as any[]),
+    ])
 
-    // 3. USDA
-    let usdaResults: any[] = []
-    try {
-      const res = await fetch(`https://api.nal.usda.gov/fdc/v1/foods/search?query=${encodeURIComponent(q)}&pageSize=4&api_key=DEMO_KEY`)
-      const data: any = await res.json()
-      usdaResults = (data.foods || []).slice(0, 4).map((f: any) => {
-        const get = (n: string) => f.foodNutrients?.find((x: any) => x.nutrientName === n)?.value || 0
-        return {
-          id: `usda_${f.fdcId}`,
-          name: f.description,
-          brand: f.brandOwner || null,
-          source: 'usda',
-          calories: Math.round(get('Energy')),
-          protein: Math.round(get('Protein') * 10) / 10,
-          carbs: Math.round(get('Carbohydrate, by difference') * 10) / 10,
-          fat: Math.round(get('Total lipid (fat)') * 10) / 10,
-          serving_unit: '100g',
-        }
-      })
-    } catch (_) {}
-
-    return [...(local || []), ...offResults, ...usdaResults]
+    // Deduplicate by name (case-insensitive), local results take priority
+    const seen = new Set<string>()
+    const all = [...(local || []), ...offResults, ...usdaResults]
+    return all.filter(f => {
+      if (!f.name || f.calories === 0) return false
+      const key = f.name.toLowerCase().slice(0, 20)
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
   },
 
   getLogs: async (date?: string) => {

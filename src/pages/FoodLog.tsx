@@ -395,7 +395,12 @@ export default function FoodLog() {
 
   // Open quantity picker instead of adding directly
   const openQtyPicker = (food: any) => {
-    setQtyFood(food)
+    // Close all sheets first so QtyPicker renders on top
+    setShowSearch(false)
+    setShowGrams(false)
+    setShowManual(false)
+    // Small delay so sheet exit animation doesn't block the picker
+    setTimeout(() => setQtyFood(food), 50)
   }
 
   const confirmAddFood = async (multiplier: number, unit: string) => {
