@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Search, Plus, Trash2, X, Scale, Lightbulb, Pencil, Check, ChevronDown } from 'lucide-react'
+import { Search, Plus, Trash2, X, Scale, Lightbulb, Pencil, Check, ChevronDown, ScanLine, Sparkles } from 'lucide-react'
 
 function BottomSheet({ show, onClose, title, children }: {
   show: boolean; onClose: () => void; title: string; children: React.ReactNode
@@ -61,6 +61,8 @@ function BottomSheet({ show, onClose, title, children }: {
 import { foodApi } from '../lib/api'
 import { supabase } from '../lib/supabase'
 import { format } from 'date-fns'
+import BarcodeScanner from '../components/BarcodeScanner'
+import AIFoodScanner, { AIFood } from '../components/AIFoodScanner'
 
 const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack']
 const MEAL_ICONS: Record<string, string> = { breakfast: '🌅', lunch: '☀️', dinner: '🌙', snack: '🍎' }
@@ -361,15 +363,84 @@ export default function FoodLog() {
   const [gramsResult, setGramsResult] = useState<any>(null)
   // Quantity picker — shown when user taps a food result before adding
   const [qtyFood, setQtyFood] = useState<any>(null)
+  const [showBarcode, setShowBarcode] = useState(false)
+  const [showAIScanner, setShowAIScanner] = useState(false)
+  const [recentFoods, setRecentFoods] = useState<any[]>([])
+  const [aiResults, setAiResults] = useState<AIFood[]>([])
   const searchTimeout = useRef<any>(null)
   const today = format(new Date(), 'yyyy-MM-dd')
 
-  useEffect(() => { loadData() }, [])
+  useEffect(() => { loadData(); loadRecentFoods() }, [])
 
   const loadData = async () => {
     const [l, s] = await Promise.all([foodApi.getLogs(today), foodApi.getSummary(today)])
     setLogs(l)
     setSummary(s)
+  }
+
+  // Load recent foods — last 8 unique foods logged
+  const loadRecentFoods = async () => {
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return
+    const { data } = await supabase
+      .from('food_logs')
+      .select('food_name, calories, protein, carbs, fat')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(40)
+    if (!data) return
+    // Deduplicate by food_name
+    const seen = new Set<string>()
+    const unique = data.filter(f => {
+      if (seen.has(f.food_name)) return false
+      seen.add(f.food_name); return true
+    }).slice(0, 8)
+    setRecentFoods(unique.map(f => ({
+      name: f.food_name, calories: f.calories,
+      protein: f.protein, carbs: f.carbs, fat: f.fat,
+      serving_unit: 'serving', source: 'recent',
+    })))
+  }
+
+  // Barcode lookup via Open Food Facts
+  const handleBarcode = async (barcode: string) => {
+    setShowBarcode(false)
+    setShowSearch(true)
+    setSearchQuery(`Scanning ${barcode}...`)
+    try {
+      const res = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`)
+      const data = await res.json()
+      if (data.status === 1 && data.product) {
+        const p = data.product
+        const n = p.nutriments || {}
+        const food = {
+          name: p.product_name || p.product_name_en || 'Unknown product',
+          brand: p.brands || null,
+          source: 'barcode',
+          calories: Math.round(n['energy-kcal_100g'] || n['energy-kcal'] || 0),
+          protein: Math.round((n['proteins_100g'] || 0) * 10) / 10,
+          carbs: Math.round((n['carbohydrates_100g'] || 0) * 10) / 10,
+          fat: Math.round((n['fat_100g'] || 0) * 10) / 10,
+          fiber: Math.round((n['fiber_100g'] || 0) * 10) / 10,
+          serving_unit: p.serving_size || '100g',
+        }
+        setSearchQuery(food.name)
+        setSearchResults([food])
+      } else {
+        setSearchQuery('')
+        setSearchResults([])
+        alert('Product not found in database. Try searching by name.')
+      }
+    } catch {
+      setSearchQuery('')
+      alert('Could not look up barcode. Check your connection.')
+    }
+  }
+
+  // AI food scan results — show as review sheet
+  const handleAIResults = (foods: AIFood[]) => {
+    setShowAIScanner(false)
+    setAiResults(foods)
   }
 
   // Scroll panel into view on mobile when it opens
@@ -560,7 +631,51 @@ export default function FoodLog() {
 
   return (
     <>
-    {/* Quantity picker modal */}
+    {/* Barcode scanner fullscreen */}
+    <AnimatePresence>
+      {showBarcode && <BarcodeScanner onResult={handleBarcode} onClose={() => setShowBarcode(false)} />}
+    </AnimatePresence>
+
+    {/* AI food scanner fullscreen */}
+    <AnimatePresence>
+      {showAIScanner && <AIFoodScanner onResult={handleAIResults} onClose={() => setShowAIScanner(false)} />}
+    </AnimatePresence>
+
+    {/* AI results review sheet */}
+    <BottomSheet show={aiResults.length > 0} onClose={() => setAiResults([])} title={`AI found ${aiResults.length} item${aiResults.length > 1 ? 's' : ''} ✦`}>
+      <MealSelector selected={selectedMeal} onChange={setSelectedMeal} />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {aiResults.map((food, i) => (
+          <div key={i} style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(128,128,128,0.06)', border: '1px solid rgba(128,128,128,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+              <div>
+                <p style={{ fontWeight: 600, fontSize: 14, color: 'rgb(248,248,255)' }}>{food.name}</p>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 2 }}>{food.portion}</p>
+                <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                  <span style={{ fontSize: 11, color: '#60a5fa' }}>P:{food.protein}g</span>
+                  <span style={{ fontSize: 11, color: '#f59e0b' }}>C:{food.carbs}g</span>
+                  <span style={{ fontSize: 11, color: '#f87171' }}>F:{food.fat}g</span>
+                </div>
+              </div>
+              <span style={{ fontWeight: 800, fontSize: 16, color: 'rgb(99,102,241)' }}>{food.calories}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <button onClick={async () => {
+          for (const food of aiResults) {
+            await foodApi.addLog({ mealType: selectedMeal, foodName: food.name, calories: food.calories, protein: food.protein, carbs: food.carbs, fat: food.fat })
+          }
+          setAiResults([]); loadData(); loadRecentFoods()
+        }} style={{ flex: 1, padding: 14, borderRadius: 12, fontSize: 14, fontWeight: 700, background: 'rgb(99,102,241)', color: '#000', border: 'none', cursor: 'pointer', boxShadow: '0 4px 20px rgba(99,102,241,0.4)' }}>
+          Add all to {selectedMeal}
+        </button>
+      </div>
+      <div className="h-2" />
+    </BottomSheet>
+
+    {/* Quantity picker */}
     <AnimatePresence>
       {qtyFood && (
         <QtyPicker
@@ -579,14 +694,23 @@ export default function FoodLog() {
           <p className="text-sm" style={{ color: 'rgb(var(--text-muted))' }}>{format(new Date(), 'EEEE, MMM d')}</p>
         </div>
         <div className="flex gap-2">
+          {/* Barcode scanner */}
+          <button onClick={() => setShowBarcode(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: 'rgba(var(--accent)/0.12)', color: 'rgb(var(--accent))' }}
+            title="Scan barcode">
+            <ScanLine size={16} />
+          </button>
+          {/* AI scanner */}
+          <button onClick={() => setShowAIScanner(true)}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold"
+            style={{ background: 'rgba(250,204,21,0.12)', color: '#facc15' }}
+            title="AI food scanner">
+            <Sparkles size={16} />
+          </button>
           <button onClick={() => { setShowSearch(!showSearch); setShowManual(false); setShowGrams(false); scrollToPanel() }}
             className="btn-accent flex items-center gap-1.5 text-sm py-2">
             <Search size={15} /> Search
-          </button>
-          <button onClick={() => { setShowGrams(!showGrams); setShowSearch(false); setShowManual(false); scrollToPanel() }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold"
-            style={{ background: 'rgba(var(--accent) / 0.12)', color: 'rgb(var(--accent))' }}>
-            <Scale size={15} /> Grams
           </button>
           <button onClick={() => { setShowManual(!showManual); setShowSearch(false); setShowGrams(false); scrollToPanel() }}
             className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold"
@@ -689,6 +813,18 @@ export default function FoodLog() {
 
       {/* ── Search bottom sheet ── */}
       <BottomSheet show={showSearch} onClose={() => { setShowSearch(false); setSearchQuery(''); setSearchResults([]) }} title="Search Food">
+        {/* Recent foods — shown when no search query */}
+        {!searchQuery && recentFoods.length > 0 && (
+          <div>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>Recent</p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {recentFoods.map((food, i) => (
+                <FoodResultRow key={i} food={food} onSelect={f => { openQtyPicker(f); setShowSearch(false) }} />
+              ))}
+            </div>
+            <div style={{ height: 4 }} />
+          </div>
+        )}
         <MealSelector selected={selectedMeal} onChange={setSelectedMeal} />
         <div className="flex rounded-xl overflow-hidden" style={{ background: 'rgba(128,128,128,0.08)' }}>
           {(['all', 'mine'] as const).map(t => (
